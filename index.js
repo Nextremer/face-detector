@@ -30,7 +30,6 @@ var FaceDetector = function (_EventEmitter) {
   _inherits(FaceDetector, _EventEmitter);
 
   function FaceDetector(_ref) {
-    var videoTag = _ref.videoTag;
     var model = _ref.model;
     var freq = _ref.freq;
     var scoreThreshold = _ref.scoreThreshold;
@@ -39,18 +38,10 @@ var FaceDetector = function (_EventEmitter) {
     _classCallCheck(this, FaceDetector);
 
     /**
-     * Video Tag
+     * Model
      */
     var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(FaceDetector).call(this));
 
-    if (!videoTag) {
-      throw new Error('Specified video tag is invalid!');
-    }
-    _this.videoTag = videoTag;
-
-    /**
-     * Model
-     */
     var _model = null;
     if (typeof model === 'string' && model in _clmtrackr.models) {
       _model = _clmtrackr.models[model];
@@ -62,14 +53,6 @@ var FaceDetector = function (_EventEmitter) {
       throw new Error('Specified model is invalid!');
     }
 
-    navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
-    navigator.getUserMedia({ video: true, audio: false }, function (stream) {
-      _this.videoTag.src = URL.createObjectURL(stream);
-      _this.emit('ready');
-    }, function (err) {
-      console.log(err);
-    });
-
     _this.tracker = new _clmtrackr.tracker();
     _this.tracker.init(_model);
 
@@ -77,54 +60,91 @@ var FaceDetector = function (_EventEmitter) {
     _this.scoreThreshold = scoreThreshold || 0.5;
     _this.sizeThreshold = sizeThreshold || { x: 30, y: 30 };
     _this.detectedStatus = false;
+    _this.videoTag = null;
     return _this;
   }
 
   _createClass(FaceDetector, [{
-    key: 'start',
-    value: function start() {
+    key: 'setup',
+    value: function setup(videoTag) {
       var _this2 = this;
 
+      /**
+       * Video Tag
+       */
+      if (!videoTag) {
+        throw new Error('Specified video tag is invalid!');
+      }
+      this.videoTag = videoTag;
+
+      /**
+       * Media
+       */
+      navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+      navigator.getUserMedia({ video: true, audio: false }, function (stream) {
+        _this2.videoTag.src = URL.createObjectURL(stream);
+        _this2.emit('ready');
+      }, function (err) {
+        console.log(err);
+      });
+    }
+  }, {
+    key: 'start',
+    value: function start() {
+      var _this3 = this;
+
+      if (!this.videoTag) {
+        throw new Error('Please setup before start');
+      }
       this.tracker.start(this.videoTag);
       this.intervalTimer = setInterval(function () {
         var size = void 0,
             position = void 0,
             newDetectedStatus = void 0,
-            score = _this2.tracker.getScore();
-        if (_this2._detectedByScore(score)) {
-          size = _this2._calculateFaceSize();
-          position = _this2._calculateFacePosition();
-          newDetectedStatus = _this2._detectedBySize(size);
+            score = _this3.tracker.getScore();
+        if (_this3._detectedByScore(score)) {
+          size = _this3._calculateFaceSize();
+          position = _this3._calculateFacePosition();
+          newDetectedStatus = _this3._detectedBySize(size);
         } else {
           newDetectedStatus = false;
         }
 
         if (newDetectedStatus) {
-          if (!_this2.detectedStatus) {
-            _this2.emit('detected', { position: position, size: size });
+          if (!_this3.detectedStatus) {
+            _this3.emit('detected', { position: position, size: size });
           } else {
-            _this2.emit('interim report', { position: position, size: size });
+            _this3.emit('interim report', { position: position, size: size });
           }
-        } else if (_this2.detectedStatus) {
-          _this2.emit('lost');
+        } else if (_this3.detectedStatus) {
+          _this3.emit('lost');
         }
-        _this2.detectedStatus = newDetectedStatus;
+        _this3.detectedStatus = newDetectedStatus;
       }, this.freq);
     }
   }, {
     key: 'stop',
     value: function stop() {
+      if (!this.videoTag) {
+        throw new Error('Please setup before stop');
+      }
       this.tracker.stop();
       clearInterval(this.intervalTimer);
     }
   }, {
     key: 'detected',
     value: function detected(score, size) {
+      if (!this.videoTag) {
+        throw new Error('Please setup');
+      }
       return this._detectedByScore(score) && this._detectedBySize(size);
     }
   }, {
     key: 'getFaceInfo',
     value: function getFaceInfo() {
+      if (!this.videoTag) {
+        throw new Error('Please setup');
+      }
       var size = this._calculateFaceSize();
       var position = this._calculateFacePosition();
       return { position: position, size: size };
@@ -132,11 +152,17 @@ var FaceDetector = function (_EventEmitter) {
   }, {
     key: 'getSize',
     value: function getSize() {
+      if (!this.videoTag) {
+        throw new Error('Please setup');
+      }
       return _calculateFaceSize();
     }
   }, {
     key: 'getPosition',
     value: function getPosition() {
+      if (!this.videoTag) {
+        throw new Error('Please setup');
+      }
       return _calculateFacePosition();
     }
   }, {

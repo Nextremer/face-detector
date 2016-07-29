@@ -15,12 +15,12 @@ face-detector
 ```
 // Initialize
 const detector = new FaceDetector({
-  videoTag: document.getElementById('input-video'), // Video element
   model: models.pca20Svm, // model data
   freq: 1000, // check frequency
   scoreThreshold: 0.5, // score threshold to judge for face detected
   sizeThreshold: { x: 100, y: 100 } // size threshold to judge for face detected
 });
+detector.setup( document.getElementById('input-video') /* Video element */ );
 
 // Handlers
 detector.on('ready', () => {

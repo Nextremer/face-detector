@@ -2,18 +2,8 @@ import EventEmitter from 'eventemitter3';
 import { tracker, models } from 'clmtrackr';
 
 export default class FaceDetector extends EventEmitter {
-  constructor({ videoTag, model, freq, scoreThreshold, sizeThreshold }) {
+  constructor({ model, freq, scoreThreshold, sizeThreshold }) {
     super();
-
-    /**
-     * Video Tag
-     */
-    if ( !videoTag ) {
-      throw new Error('Specified video tag is invalid!');
-    }
-    this.videoTag = videoTag;
-
-
     /**
      * Model
      */
@@ -28,6 +18,28 @@ export default class FaceDetector extends EventEmitter {
       throw new Error('Specified model is invalid!');
     }
 
+    this.tracker = new tracker();
+    this.tracker.init( _model );
+
+    this.freq = freq || 1000;
+    this.scoreThreshold = scoreThreshold || 0.5;
+    this.sizeThreshold = sizeThreshold || { x: 30, y: 30 };
+    this.detectedStatus = false;
+    this.videoTag = null;
+  }
+
+  setup( videoTag ) {
+    /**
+     * Video Tag
+     */
+    if ( !videoTag ) {
+      throw new Error('Specified video tag is invalid!');
+    }
+    this.videoTag = videoTag;
+
+    /**
+     * Media
+     */
     navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
     navigator.getUserMedia(
       { video: true, audio: false },
@@ -37,18 +49,12 @@ export default class FaceDetector extends EventEmitter {
       },
       err => { console.log( err ) }
     );
-
-
-    this.tracker = new tracker();
-    this.tracker.init( _model );
-
-    this.freq = freq || 1000;
-    this.scoreThreshold = scoreThreshold || 0.5;
-    this.sizeThreshold = sizeThreshold || { x: 30, y: 30 };
-    this.detectedStatus = false;
   }
 
   start() {
+    if ( ! this.videoTag ) {
+      throw new Error( 'Please setup before start' );
+    }
     this.tracker.start( this.videoTag );
     this.intervalTimer = setInterval( () => {
       let size, position, newDetectedStatus, score = this.tracker.getScore();
@@ -75,25 +81,40 @@ export default class FaceDetector extends EventEmitter {
   }
 
   stop() {
+    if ( ! this.videoTag ) {
+      throw new Error( 'Please setup before stop' );
+    }
     this.tracker.stop();
     clearInterval( this.intervalTimer );
   }
 
   detected( score, size ) {
+    if ( ! this.videoTag ) {
+      throw new Error( 'Please setup' );
+    }
     return this._detectedByScore( score ) && this._detectedBySize( size );
   }
 
   getFaceInfo() {
+    if ( ! this.videoTag ) {
+      throw new Error( 'Please setup' );
+    }
     const size = this._calculateFaceSize();
     const position = this._calculateFacePosition();
     return { position, size };
   }
 
   getSize() {
+    if ( ! this.videoTag ) {
+      throw new Error( 'Please setup' );
+    }
     return _calculateFaceSize();
   }
 
   getPosition() {
+    if ( ! this.videoTag ) {
+      throw new Error( 'Please setup' );
+    }
     return _calculateFacePosition();
   }
 
