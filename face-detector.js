@@ -42,7 +42,7 @@ export default class FaceDetector extends EventEmitter {
      */
     navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
     navigator.getUserMedia(
-      { video: true, audio: false },
+      { video: true, audio: true },
       stream => {
         this.videoTag.src = URL.createObjectURL( stream );
         this.emit( 'ready' );

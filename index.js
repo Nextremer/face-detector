@@ -81,7 +81,7 @@ var FaceDetector = function (_EventEmitter) {
        * Media
        */
       navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
-      navigator.getUserMedia({ video: true, audio: false }, function (stream) {
+      navigator.getUserMedia({ video: true, audio: true }, function (stream) {
         _this2.videoTag.src = URL.createObjectURL(stream);
         _this2.emit('ready');
       }, function (err) {
