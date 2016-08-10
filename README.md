@@ -12,6 +12,11 @@ face-detector
 `npm install -S Nextremer/face-detector`
 
 ## Usage
+### First, put following tags in your HTML code.
+  - <video /> tag to put video from web camera.
+  - <canvas /> tag to put capture image.
+
+### Setup
 ```
 // Initialize
 const detector = new FaceDetector({
@@ -20,7 +25,10 @@ const detector = new FaceDetector({
   scoreThreshold: 0.5, // score threshold to judge for face detected
   sizeThreshold: { x: 100, y: 100 } // size threshold to judge for face detected
 });
-detector.setup( document.getElementById('input-video') /* Video element */ );
+detector.setup(
+  document.getElementById('input-video'), /* Video element */
+  document.getElementById('input-canvas') /* Canvas element */
+);
 
 // Handlers
 detector.on('ready', () => {

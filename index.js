@@ -61,12 +61,16 @@ var FaceDetector = function (_EventEmitter) {
     _this.sizeThreshold = sizeThreshold || { x: 30, y: 30 };
     _this.detectedStatus = false;
     _this.videoTag = null;
+    _this.canvasTag = null;
+    _this.ctx = null;
+    _this.stream = null;
+    _this.dataURL = null;
     return _this;
   }
 
   _createClass(FaceDetector, [{
     key: 'setup',
-    value: function setup(videoTag) {
+    value: function setup(videoTag, canvasTag) {
       var _this2 = this;
 
       /**
@@ -78,12 +82,22 @@ var FaceDetector = function (_EventEmitter) {
       this.videoTag = videoTag;
 
       /**
+       * Canvas Tag
+       */
+      if (!canvasTag) {
+        throw new Error('Specified canvas tag is invalid!');
+      }
+      this.canvasTag = canvasTag;
+      this.ctx = this.canvasTag.getContext('2d');
+
+      /**
        * Media
        */
       navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
       navigator.getUserMedia({ video: true, audio: true }, function (stream) {
         _this2.videoTag.src = URL.createObjectURL(stream);
         _this2.emit('ready');
+        _this2.stream = stream;
       }, function (err) {
         console.log(err);
       });
@@ -112,7 +126,8 @@ var FaceDetector = function (_EventEmitter) {
 
         if (newDetectedStatus) {
           if (!_this3.detectedStatus) {
-            _this3.emit('detected', { position: position, size: size });
+            _this3.capture();
+            _this3.emit('detected', { position: position, size: size, dataURL: _this3.dataURL });
           } else {
             _this3.emit('interim report', { position: position, size: size });
           }
@@ -164,6 +179,14 @@ var FaceDetector = function (_EventEmitter) {
         throw new Error('Please setup');
       }
       return _calculateFacePosition();
+    }
+  }, {
+    key: 'capture',
+    value: function capture() {
+      if (this.stream) {
+        this.ctx.drawImage(this.videoTag, 0, 0);
+        this.dataURL = this.canvasTag.toDataURL('image/png');
+      }
     }
   }, {
     key: '_detectedByScore',

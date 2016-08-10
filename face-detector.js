@@ -26,9 +26,13 @@ export default class FaceDetector extends EventEmitter {
     this.sizeThreshold = sizeThreshold || { x: 30, y: 30 };
     this.detectedStatus = false;
     this.videoTag = null;
+    this.canvasTag = null;
+    this.ctx= null;
+    this.stream = null;
+    this.dataURL = null;
   }
 
-  setup( videoTag ) {
+  setup( videoTag, canvasTag ) {
     /**
      * Video Tag
      */
@@ -36,6 +40,15 @@ export default class FaceDetector extends EventEmitter {
       throw new Error('Specified video tag is invalid!');
     }
     this.videoTag = videoTag;
+
+    /**
+     * Canvas Tag
+     */
+    if ( !canvasTag ) {
+      throw new Error('Specified canvas tag is invalid!');
+    }
+    this.canvasTag = canvasTag;
+    this.ctx = this.canvasTag.getContext( '2d' );
 
     /**
      * Media
@@ -46,6 +59,7 @@ export default class FaceDetector extends EventEmitter {
       stream => {
         this.videoTag.src = URL.createObjectURL( stream );
         this.emit( 'ready' );
+        this.stream = stream;
       },
       err => { console.log( err ) }
     );
@@ -69,7 +83,8 @@ export default class FaceDetector extends EventEmitter {
 
       if ( newDetectedStatus ) {
         if ( ! this.detectedStatus ) {
-          this.emit( 'detected', { position, size });
+          this.capture();
+          this.emit( 'detected', { position, size, dataURL: this.dataURL });
         } else {
           this.emit( 'interim report', { position, size });
         }
@@ -116,6 +131,13 @@ export default class FaceDetector extends EventEmitter {
       throw new Error( 'Please setup' );
     }
     return _calculateFacePosition();
+  }
+
+  capture() {
+    if ( this.stream ) {
+      this.ctx.drawImage( this.videoTag, 0, 0 );
+      this.dataURL = this.canvasTag.toDataURL('image/png');
+    }
   }
 
   _detectedByScore( score ) {
