@@ -135,7 +135,24 @@ export default class FaceDetector extends EventEmitter {
 
   capture() {
     if ( this.stream ) {
-      this.ctx.drawImage( this.videoTag, 0, 0 );
+      /**
+       * TODO 髪の比率を考えて計算する
+       */
+      const { x, y } = this._getCurrentPosition();
+      let [ minX, minY ] = [ Math.min( ...x ), Math.min( ...y ) ];
+      let [ maxX, maxY ] = [ Math.max( ...x ), Math.max( ...y ) ];
+      const size = this._calculateFaceSize();
+
+      minY = minY > size.y * 0.8 ? minY - size.y * 0.8 : 0;
+      size.y = minY > 0 ? size.y * 1.8 : maxY;
+
+      const canvasHeight = size.y / size.x * 400;
+      console.log( minX, minY );
+      console.log( size );
+
+      this.canvasTag.height = canvasHeight;
+
+      this.ctx.drawImage( this.videoTag, minX, minY, size.x, size.y, 0, 0, 400, canvasHeight );
       this.dataURL = this.canvasTag.toDataURL('image/png');
     }
   }
