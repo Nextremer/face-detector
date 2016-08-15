@@ -135,24 +135,31 @@ export default class FaceDetector extends EventEmitter {
 
   capture() {
     if ( this.stream ) {
-      /**
-       * TODO 髪の比率を考えて計算する
-       */
       const { x, y } = this._getCurrentPosition();
       let [ minX, minY ] = [ Math.min( ...x ), Math.min( ...y ) ];
-      let [ maxX, maxY ] = [ Math.max( ...x ), Math.max( ...y ) ];
+      let maxY = Math.max( ...y );
       const size = this._calculateFaceSize();
 
-      minY = minY > size.y * 0.8 ? minY - size.y * 0.8 : 0;
-      size.y = minY > 0 ? size.y * 1.8 : maxY;
+      /** 髪比率 **/
+      minY = minY > size.y * 0.6 ? minY - size.y * 0.6 : 0;
+      size.y = minY > 0 ? size.y * 1.6 : maxY;
 
-      const canvasHeight = size.y / size.x * 400;
-      console.log( minX, minY );
-      console.log( size );
+      minX *= 1.5; minY *= 1.5;
+      size.x *= 2; size.y *= 2;
 
-      this.canvasTag.height = canvasHeight;
+      let cw = this.canvasTag.width;
+      let ch = this.canvasTag.height;
 
-      this.ctx.drawImage( this.videoTag, minX, minY, size.x, size.y, 0, 0, 400, canvasHeight );
+      if ( size.x / size.y > cw / ch ) {
+        ch = size.y / size.x * cw;
+      } else {
+        cw = size.x / size.y * ch;
+      }
+
+      this.canvasTag.width = cw;
+      this.canvasTag.height = ch;
+
+      this.ctx.drawImage( this.videoTag, minX, minY, size.x, size.y, 0, 0, cw, ch );
       this.dataURL = this.canvasTag.toDataURL('image/png');
     }
   }
@@ -186,11 +193,7 @@ export default class FaceDetector extends EventEmitter {
   }
 
   _transpose( targ ) {
-    return Object.keys( targ[0] ).map( c => {
-      return targ.map( r => {
-        return r[c];
-      });
-    });
+    return [ targ.map( x => x[0] ), targ.map( x => x[1] ) ]
   }
 
   _getCenter( targ ) {

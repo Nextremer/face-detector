@@ -184,7 +184,36 @@ var FaceDetector = function (_EventEmitter) {
     key: 'capture',
     value: function capture() {
       if (this.stream) {
-        this.ctx.drawImage(this.videoTag, 0, 0);
+        var _getCurrentPosition2 = this._getCurrentPosition();
+
+        var x = _getCurrentPosition2.x;
+        var y = _getCurrentPosition2.y;
+        var minX = Math.min.apply(Math, _toConsumableArray(x));
+        var minY = Math.min.apply(Math, _toConsumableArray(y));
+
+        var maxY = Math.max.apply(Math, _toConsumableArray(y));
+        var size = this._calculateFaceSize();
+
+        /** 髪比率 **/
+        minY = minY > size.y * 0.6 ? minY - size.y * 0.6 : 0;
+        size.y = minY > 0 ? size.y * 1.6 : maxY;
+
+        minX *= 1.5;minY *= 1.5;
+        size.x *= 2;size.y *= 2;
+
+        var cw = this.canvasTag.width;
+        var ch = this.canvasTag.height;
+
+        if (size.x / size.y > cw / ch) {
+          ch = size.y / size.x * cw;
+        } else {
+          cw = size.x / size.y * ch;
+        }
+
+        this.canvasTag.width = cw;
+        this.canvasTag.height = ch;
+
+        this.ctx.drawImage(this.videoTag, minX, minY, size.x, size.y, 0, 0, cw, ch);
         this.dataURL = this.canvasTag.toDataURL('image/png');
       }
     }
@@ -216,20 +245,20 @@ var FaceDetector = function (_EventEmitter) {
   }, {
     key: '_calculateFacePosition',
     value: function _calculateFacePosition() {
-      var _getCurrentPosition2 = this._getCurrentPosition();
+      var _getCurrentPosition3 = this._getCurrentPosition();
 
-      var x = _getCurrentPosition2.x;
-      var y = _getCurrentPosition2.y;
+      var x = _getCurrentPosition3.x;
+      var y = _getCurrentPosition3.y;
 
       return this._getPercentage({ x: this._getCenter(x), y: this._getCenter(y) });
     }
   }, {
     key: '_calculateFaceSize',
     value: function _calculateFaceSize() {
-      var _getCurrentPosition3 = this._getCurrentPosition();
+      var _getCurrentPosition4 = this._getCurrentPosition();
 
-      var x = _getCurrentPosition3.x;
-      var y = _getCurrentPosition3.y;
+      var x = _getCurrentPosition4.x;
+      var y = _getCurrentPosition4.y;
 
       return {
         x: Math.max.apply(Math, _toConsumableArray(x)) - Math.min.apply(Math, _toConsumableArray(x)),
@@ -239,11 +268,11 @@ var FaceDetector = function (_EventEmitter) {
   }, {
     key: '_transpose',
     value: function _transpose(targ) {
-      return Object.keys(targ[0]).map(function (c) {
-        return targ.map(function (r) {
-          return r[c];
-        });
-      });
+      return [targ.map(function (x) {
+        return x[0];
+      }), targ.map(function (x) {
+        return x[1];
+      })];
     }
   }, {
     key: '_getCenter',
