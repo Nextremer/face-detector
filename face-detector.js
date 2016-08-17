@@ -23,7 +23,7 @@ export default class FaceDetector extends EventEmitter {
 
     this.freq = freq || 1000;
     this.scoreThreshold = scoreThreshold || 0.5;
-    this.sizeThreshold = sizeThreshold || { x: 30, y: 30 };
+    this.sizeThreshold = sizeThreshold || { x: 10, y: 10 };
     this.detectedStatus = false;
     this.videoTag = null;
     this.canvasTag = null;
@@ -136,16 +136,21 @@ export default class FaceDetector extends EventEmitter {
   capture() {
     if ( this.stream ) {
       const { x, y } = this._getCurrentPosition();
-      let [ minX, minY ] = [ Math.min( ...x ), Math.min( ...y ) ];
-      let maxY = Math.max( ...y );
-      const size = this._calculateFaceSize();
+
+      const min = { x: Math.min( ...x ), y: Math.min( ...y ) };
+      const max = { x: Math.max( ...x ), y: Math.max( ...y ) };
+      const size = this._calculateSize();
+      const pos = { x: this._getCenter( x ), y: this._getCenter( y ) };
 
       /** 髪比率 **/
-      minY = minY > size.y * 0.6 ? minY - size.y * 0.6 : 0;
-      size.y = minY > 0 ? size.y * 1.6 : maxY;
+      min.y = min.y > size.y * 0.6 ? min.y - size.y * 0.6 : 0;
+      size.y = min.y > 0 ? size.y * 1.6 : max.y;
 
-      minX *= 1.5; minY *= 1.5;
-      size.x *= 2; size.y *= 2;
+      min.x = pos.x - size.y / 2;
+      size.x = size.y;
+
+      min.x *= 1.5; min.y *= 1.5;
+      size.x *= 1.8; size.y *= 1.8;
 
       let cw = this.canvasTag.width;
       let ch = this.canvasTag.height;
@@ -159,7 +164,7 @@ export default class FaceDetector extends EventEmitter {
       this.canvasTag.width = cw;
       this.canvasTag.height = ch;
 
-      this.ctx.drawImage( this.videoTag, minX, minY, size.x, size.y, 0, 0, cw, ch );
+      this.ctx.drawImage( this.videoTag, min.x, min.y, size.x, size.y, 0, 0, cw, ch );
       this.dataURL = this.canvasTag.toDataURL('image/png');
     }
   }
@@ -185,6 +190,14 @@ export default class FaceDetector extends EventEmitter {
   }
 
   _calculateFaceSize() {
+    const size = this._calculateSize();
+    return {
+      x: size.x / this.videoTag.width * 100,
+      y: size.y / this.videoTag.height * 100,
+    };
+  }
+
+  _calculateSize() {
     const { x, y } = this._getCurrentPosition();
     return {
       x: Math.max( ...x ) - Math.min( ...x ),

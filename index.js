@@ -58,7 +58,7 @@ var FaceDetector = function (_EventEmitter) {
 
     _this.freq = freq || 1000;
     _this.scoreThreshold = scoreThreshold || 0.5;
-    _this.sizeThreshold = sizeThreshold || { x: 30, y: 30 };
+    _this.sizeThreshold = sizeThreshold || { x: 10, y: 10 };
     _this.detectedStatus = false;
     _this.videoTag = null;
     _this.canvasTag = null;
@@ -188,18 +188,22 @@ var FaceDetector = function (_EventEmitter) {
 
         var x = _getCurrentPosition2.x;
         var y = _getCurrentPosition2.y;
-        var minX = Math.min.apply(Math, _toConsumableArray(x));
-        var minY = Math.min.apply(Math, _toConsumableArray(y));
 
-        var maxY = Math.max.apply(Math, _toConsumableArray(y));
-        var size = this._calculateFaceSize();
+
+        var min = { x: Math.min.apply(Math, _toConsumableArray(x)), y: Math.min.apply(Math, _toConsumableArray(y)) };
+        var max = { x: Math.max.apply(Math, _toConsumableArray(x)), y: Math.max.apply(Math, _toConsumableArray(y)) };
+        var size = this._calculateSize();
+        var pos = { x: this._getCenter(x), y: this._getCenter(y) };
 
         /** 髪比率 **/
-        minY = minY > size.y * 0.6 ? minY - size.y * 0.6 : 0;
-        size.y = minY > 0 ? size.y * 1.6 : maxY;
+        min.y = min.y > size.y * 0.6 ? min.y - size.y * 0.6 : 0;
+        size.y = min.y > 0 ? size.y * 1.6 : max.y;
 
-        minX *= 1.5;minY *= 1.5;
-        size.x *= 2;size.y *= 2;
+        min.x = pos.x - size.y / 2;
+        size.x = size.y;
+
+        min.x *= 1.5;min.y *= 1.5;
+        size.x *= 1.8;size.y *= 1.8;
 
         var cw = this.canvasTag.width;
         var ch = this.canvasTag.height;
@@ -213,7 +217,7 @@ var FaceDetector = function (_EventEmitter) {
         this.canvasTag.width = cw;
         this.canvasTag.height = ch;
 
-        this.ctx.drawImage(this.videoTag, minX, minY, size.x, size.y, 0, 0, cw, ch);
+        this.ctx.drawImage(this.videoTag, min.x, min.y, size.x, size.y, 0, 0, cw, ch);
         this.dataURL = this.canvasTag.toDataURL('image/png');
       }
     }
@@ -255,6 +259,15 @@ var FaceDetector = function (_EventEmitter) {
   }, {
     key: '_calculateFaceSize',
     value: function _calculateFaceSize() {
+      var size = this._calculateSize();
+      return {
+        x: size.x / this.videoTag.width * 100,
+        y: size.y / this.videoTag.height * 100
+      };
+    }
+  }, {
+    key: '_calculateSize',
+    value: function _calculateSize() {
       var _getCurrentPosition4 = this._getCurrentPosition();
 
       var x = _getCurrentPosition4.x;
