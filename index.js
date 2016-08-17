@@ -125,11 +125,11 @@ var FaceDetector = function (_EventEmitter) {
         }
 
         if (newDetectedStatus) {
+          _this3.capture();
           if (!_this3.detectedStatus) {
-            _this3.capture();
             _this3.emit('detected', { position: position, size: size, dataURL: _this3.dataURL });
           } else {
-            _this3.emit('interim report', { position: position, size: size });
+            _this3.emit('interim report', { position: position, size: size, dataURL: _this3.dataURL });
           }
         } else if (_this3.detectedStatus) {
           _this3.emit('lost');

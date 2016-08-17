@@ -82,11 +82,11 @@ export default class FaceDetector extends EventEmitter {
 
 
       if ( newDetectedStatus ) {
+        this.capture();
         if ( ! this.detectedStatus ) {
-          this.capture();
           this.emit( 'detected', { position, size, dataURL: this.dataURL });
         } else {
-          this.emit( 'interim report', { position, size });
+          this.emit( 'interim report', { position, size, dataURL: this.dataURL });
         }
       } else if ( this.detectedStatus ) {
         this.emit( 'lost');
