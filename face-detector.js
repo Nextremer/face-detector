@@ -23,12 +23,16 @@ export default class FaceDetector extends EventEmitter {
 
     this.freq = freq || 1000;
     this.scoreThreshold = scoreThreshold || 0.5;
-    this.sizeThreshold = sizeThreshold || { x: 30, y: 30 };
+    this.sizeThreshold = sizeThreshold || { x: 10, y: 10 };
     this.detectedStatus = false;
     this.videoTag = null;
+    this.canvasTag = null;
+    this.ctx= null;
+    this.stream = null;
+    this.dataURL = null;
   }
 
-  setup( videoTag ) {
+  setup( videoTag, canvasTag ) {
     /**
      * Video Tag
      */
@@ -36,6 +40,15 @@ export default class FaceDetector extends EventEmitter {
       throw new Error('Specified video tag is invalid!');
     }
     this.videoTag = videoTag;
+
+    /**
+     * Canvas Tag
+     */
+    if ( !canvasTag ) {
+      throw new Error('Specified canvas tag is invalid!');
+    }
+    this.canvasTag = canvasTag;
+    this.ctx = this.canvasTag.getContext( '2d' );
 
     /**
      * Media
@@ -46,6 +59,7 @@ export default class FaceDetector extends EventEmitter {
       stream => {
         this.videoTag.src = URL.createObjectURL( stream );
         this.emit( 'ready' );
+        this.stream = stream;
       },
       err => { console.log( err ) }
     );
@@ -68,10 +82,11 @@ export default class FaceDetector extends EventEmitter {
 
 
       if ( newDetectedStatus ) {
+        this.capture();
         if ( ! this.detectedStatus ) {
-          this.emit( 'detected', { position, size });
+          this.emit( 'detected', { position, size, dataURL: this.dataURL });
         } else {
-          this.emit( 'interim report', { position, size });
+          this.emit( 'interim report', { position, size, dataURL: this.dataURL });
         }
       } else if ( this.detectedStatus ) {
         this.emit( 'lost');
@@ -118,6 +133,42 @@ export default class FaceDetector extends EventEmitter {
     return _calculateFacePosition();
   }
 
+  capture() {
+    if ( this.stream ) {
+      const { x, y } = this._getCurrentPosition();
+
+      const min = { x: Math.min( ...x ), y: Math.min( ...y ) };
+      const max = { x: Math.max( ...x ), y: Math.max( ...y ) };
+      const size = this._calculateSize();
+      const pos = { x: this._getCenter( x ), y: this._getCenter( y ) };
+
+      /** 髪比率 **/
+      min.y = min.y > size.y * 0.6 ? min.y - size.y * 0.6 : 0;
+      size.y = min.y > 0 ? size.y * 1.6 : max.y;
+
+      min.x = pos.x - size.y / 2;
+      size.x = size.y;
+
+      min.x *= 1.5; min.y *= 1.5;
+      size.x *= 1.8; size.y *= 1.8;
+
+      let cw = this.canvasTag.width;
+      let ch = this.canvasTag.height;
+
+      if ( size.x / size.y > cw / ch ) {
+        ch = size.y / size.x * cw;
+      } else {
+        cw = size.x / size.y * ch;
+      }
+
+      this.canvasTag.width = cw;
+      this.canvasTag.height = ch;
+
+      this.ctx.drawImage( this.videoTag, min.x, min.y, size.x, size.y, 0, 0, cw, ch );
+      this.dataURL = this.canvasTag.toDataURL('image/png');
+    }
+  }
+
   _detectedByScore( score ) {
     return score > this.scoreThreshold;
   }
@@ -139,6 +190,14 @@ export default class FaceDetector extends EventEmitter {
   }
 
   _calculateFaceSize() {
+    const size = this._calculateSize();
+    return {
+      x: size.x / this.videoTag.width * 100,
+      y: size.y / this.videoTag.height * 100,
+    };
+  }
+
+  _calculateSize() {
     const { x, y } = this._getCurrentPosition();
     return {
       x: Math.max( ...x ) - Math.min( ...x ),
@@ -147,11 +206,7 @@ export default class FaceDetector extends EventEmitter {
   }
 
   _transpose( targ ) {
-    return Object.keys( targ[0] ).map( c => {
-      return targ.map( r => {
-        return r[c];
-      });
-    });
+    return [ targ.map( x => x[0] ), targ.map( x => x[1] ) ]
   }
 
   _getCenter( targ ) {

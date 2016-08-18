@@ -58,15 +58,19 @@ var FaceDetector = function (_EventEmitter) {
 
     _this.freq = freq || 1000;
     _this.scoreThreshold = scoreThreshold || 0.5;
-    _this.sizeThreshold = sizeThreshold || { x: 30, y: 30 };
+    _this.sizeThreshold = sizeThreshold || { x: 10, y: 10 };
     _this.detectedStatus = false;
     _this.videoTag = null;
+    _this.canvasTag = null;
+    _this.ctx = null;
+    _this.stream = null;
+    _this.dataURL = null;
     return _this;
   }
 
   _createClass(FaceDetector, [{
     key: 'setup',
-    value: function setup(videoTag) {
+    value: function setup(videoTag, canvasTag) {
       var _this2 = this;
 
       /**
@@ -78,12 +82,22 @@ var FaceDetector = function (_EventEmitter) {
       this.videoTag = videoTag;
 
       /**
+       * Canvas Tag
+       */
+      if (!canvasTag) {
+        throw new Error('Specified canvas tag is invalid!');
+      }
+      this.canvasTag = canvasTag;
+      this.ctx = this.canvasTag.getContext('2d');
+
+      /**
        * Media
        */
       navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
       navigator.getUserMedia({ video: true, audio: true }, function (stream) {
         _this2.videoTag.src = URL.createObjectURL(stream);
         _this2.emit('ready');
+        _this2.stream = stream;
       }, function (err) {
         console.log(err);
       });
@@ -111,10 +125,11 @@ var FaceDetector = function (_EventEmitter) {
         }
 
         if (newDetectedStatus) {
+          _this3.capture();
           if (!_this3.detectedStatus) {
-            _this3.emit('detected', { position: position, size: size });
+            _this3.emit('detected', { position: position, size: size, dataURL: _this3.dataURL });
           } else {
-            _this3.emit('interim report', { position: position, size: size });
+            _this3.emit('interim report', { position: position, size: size, dataURL: _this3.dataURL });
           }
         } else if (_this3.detectedStatus) {
           _this3.emit('lost');
@@ -166,6 +181,47 @@ var FaceDetector = function (_EventEmitter) {
       return _calculateFacePosition();
     }
   }, {
+    key: 'capture',
+    value: function capture() {
+      if (this.stream) {
+        var _getCurrentPosition2 = this._getCurrentPosition();
+
+        var x = _getCurrentPosition2.x;
+        var y = _getCurrentPosition2.y;
+
+
+        var min = { x: Math.min.apply(Math, _toConsumableArray(x)), y: Math.min.apply(Math, _toConsumableArray(y)) };
+        var max = { x: Math.max.apply(Math, _toConsumableArray(x)), y: Math.max.apply(Math, _toConsumableArray(y)) };
+        var size = this._calculateSize();
+        var pos = { x: this._getCenter(x), y: this._getCenter(y) };
+
+        /** 髪比率 **/
+        min.y = min.y > size.y * 0.6 ? min.y - size.y * 0.6 : 0;
+        size.y = min.y > 0 ? size.y * 1.6 : max.y;
+
+        min.x = pos.x - size.y / 2;
+        size.x = size.y;
+
+        min.x *= 1.5;min.y *= 1.5;
+        size.x *= 1.8;size.y *= 1.8;
+
+        var cw = this.canvasTag.width;
+        var ch = this.canvasTag.height;
+
+        if (size.x / size.y > cw / ch) {
+          ch = size.y / size.x * cw;
+        } else {
+          cw = size.x / size.y * ch;
+        }
+
+        this.canvasTag.width = cw;
+        this.canvasTag.height = ch;
+
+        this.ctx.drawImage(this.videoTag, min.x, min.y, size.x, size.y, 0, 0, cw, ch);
+        this.dataURL = this.canvasTag.toDataURL('image/png');
+      }
+    }
+  }, {
     key: '_detectedByScore',
     value: function _detectedByScore(score) {
       return score > this.scoreThreshold;
@@ -193,20 +249,29 @@ var FaceDetector = function (_EventEmitter) {
   }, {
     key: '_calculateFacePosition',
     value: function _calculateFacePosition() {
-      var _getCurrentPosition2 = this._getCurrentPosition();
+      var _getCurrentPosition3 = this._getCurrentPosition();
 
-      var x = _getCurrentPosition2.x;
-      var y = _getCurrentPosition2.y;
+      var x = _getCurrentPosition3.x;
+      var y = _getCurrentPosition3.y;
 
       return this._getPercentage({ x: this._getCenter(x), y: this._getCenter(y) });
     }
   }, {
     key: '_calculateFaceSize',
     value: function _calculateFaceSize() {
-      var _getCurrentPosition3 = this._getCurrentPosition();
+      var size = this._calculateSize();
+      return {
+        x: size.x / this.videoTag.width * 100,
+        y: size.y / this.videoTag.height * 100
+      };
+    }
+  }, {
+    key: '_calculateSize',
+    value: function _calculateSize() {
+      var _getCurrentPosition4 = this._getCurrentPosition();
 
-      var x = _getCurrentPosition3.x;
-      var y = _getCurrentPosition3.y;
+      var x = _getCurrentPosition4.x;
+      var y = _getCurrentPosition4.y;
 
       return {
         x: Math.max.apply(Math, _toConsumableArray(x)) - Math.min.apply(Math, _toConsumableArray(x)),
@@ -216,11 +281,11 @@ var FaceDetector = function (_EventEmitter) {
   }, {
     key: '_transpose',
     value: function _transpose(targ) {
-      return Object.keys(targ[0]).map(function (c) {
-        return targ.map(function (r) {
-          return r[c];
-        });
-      });
+      return [targ.map(function (x) {
+        return x[0];
+      }), targ.map(function (x) {
+        return x[1];
+      })];
     }
   }, {
     key: '_getCenter',
