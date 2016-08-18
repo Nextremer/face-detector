@@ -1,6 +1,6 @@
 {
   "name": "face-detector",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Face Detector",
   "main": "index.js",
   "scripts": {
