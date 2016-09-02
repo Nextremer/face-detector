@@ -31,9 +31,6 @@ var FaceDetector = function (_EventEmitter) {
 
   function FaceDetector(_ref) {
     var model = _ref.model;
-    var freq = _ref.freq;
-    var scoreThreshold = _ref.scoreThreshold;
-    var sizeThreshold = _ref.sizeThreshold;
 
     _classCallCheck(this, FaceDetector);
 
@@ -56,9 +53,9 @@ var FaceDetector = function (_EventEmitter) {
     _this.tracker = new _clmtrackr.tracker();
     _this.tracker.init(_model);
 
-    _this.freq = freq || 1000;
-    _this.scoreThreshold = scoreThreshold || 0.5;
-    _this.sizeThreshold = sizeThreshold || { x: 10, y: 10 };
+    _this.freq = null;
+    _this.scoreThreshold = null;
+    _this.sizeThreshold = null;
     _this.detectedStatus = false;
     _this.videoTag = null;
     _this.canvasTag = null;
@@ -70,8 +67,18 @@ var FaceDetector = function (_EventEmitter) {
 
   _createClass(FaceDetector, [{
     key: 'setup',
-    value: function setup(videoTag, canvasTag) {
+    value: function setup(_ref2) {
       var _this2 = this;
+
+      var videoTag = _ref2.videoTag;
+      var canvasTag = _ref2.canvasTag;
+      var freq = _ref2.freq;
+      var scoreThreshold = _ref2.scoreThreshold;
+      var sizeThreshold = _ref2.sizeThreshold;
+
+      this.freq = freq || 1000;
+      this.scoreThreshold = scoreThreshold || 0.5;
+      this.sizeThreshold = sizeThreshold || { x: 10, y: 10 };
 
       /**
        * Video Tag
