@@ -2,7 +2,7 @@ import EventEmitter from 'eventemitter3';
 import { tracker, models } from 'clmtrackr';
 
 export default class FaceDetector extends EventEmitter {
-  constructor({ model, freq, scoreThreshold, sizeThreshold }) {
+  constructor({ model }) {
     super();
     /**
      * Model
@@ -21,9 +21,9 @@ export default class FaceDetector extends EventEmitter {
     this.tracker = new tracker();
     this.tracker.init( _model );
 
-    this.freq = freq || 1000;
-    this.scoreThreshold = scoreThreshold || 0.5;
-    this.sizeThreshold = sizeThreshold || { x: 10, y: 10 };
+    this.freq = null;
+    this.scoreThreshold = null;
+    this.sizeThreshold = null;
     this.detectedStatus = false;
     this.videoTag = null;
     this.canvasTag = null;
@@ -32,7 +32,11 @@ export default class FaceDetector extends EventEmitter {
     this.dataURL = null;
   }
 
-  setup( videoTag, canvasTag ) {
+  setup({ videoTag, canvasTag, freq, scoreThreshold, sizeThreshold }) {
+    this.freq = freq || 1000;
+    this.scoreThreshold = scoreThreshold || 0.5;
+    this.sizeThreshold = sizeThreshold || { x: 10, y: 10 };
+
     /**
      * Video Tag
      */
