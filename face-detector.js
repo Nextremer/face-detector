@@ -1,5 +1,5 @@
 import EventEmitter from 'eventemitter3';
-import { FaceDetectorClmtrackr } from './face-detector-clmtrackr';
+import FaceDetectorClmtrackr from './face-detector-clmtrackr';
 // import FaceDetectorTrackingjs from './face-detector-trackingjs';
 import clmtrackr from 'clmtrackr';
 
@@ -16,8 +16,6 @@ export default class FaceDetector extends EventEmitter {
     if ( ! tracker ) {
       throw new Error( 'Invalid tracker!' );
     }
-
-    this.tracker.init( _model );
 
     this.detectedStatus = false;
     this.ctx= null;
@@ -57,6 +55,10 @@ export default class FaceDetector extends EventEmitter {
         this.videoTag.src = URL.createObjectURL( stream );
         this.emit( 'ready' );
         this.stream = stream;
+        this.videoTag.onloadedmetadata = () => {
+          this.videoTag.width = this.videoTag.videoWidth;
+          this.videoTag.height = this.videoTag.videoHeight;
+        };
       },
       err => { console.log( err ) }
     );
@@ -121,10 +123,7 @@ export default class FaceDetector extends EventEmitter {
         cw = size.x / size.y * ch;
       }
 
-      this.canvasTag.width = cw;
-      this.canvasTag.height = ch;
-
-      this.ctx.drawImage( this.videoTag, min.x, min.y, size.x, size.y, 0, 0, cw, ch );
+      this.ctx.drawImage( this.videoTag, point.x, point.y, size.x, size.y, 0, 0, cw, ch );
       this.dataURL = this.canvasTag.toDataURL('image/png');
     }
   }

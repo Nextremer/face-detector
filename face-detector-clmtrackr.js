@@ -1,6 +1,6 @@
 import { tracker, models } from 'clmtrackr';
 
-export class FaceDetectorClmtrackr {
+export default class FaceDetectorClmtrackr {
   constructor() {
     this.tracker = new tracker();
 
@@ -63,26 +63,25 @@ export class FaceDetectorClmtrackr {
 
   getFaceInfo( points ) {
     const _points = points || this._getPoints();
-    const size = this._calculateFaceSize( points );
-    const position = this._calculateFacePosition( points );
+    const size = this._calculateSizePercentage( _points );
+    const position = this._calculatePositionPercentage( _points );
     return { position, size };
   }
 
   getVertexesForCapture() {
     const points = this._getPoints();
 
-    const { position, size } = this.getFaceInfo( points );
+    const position = this._calculatePosition( points );
+    const size = this._calculateSize( points );
     const { min, max } = this._getVertexes( points );
 
     /** 髪比率 **/
     min.y = min.y > size.y * 0.6 ? min.y - size.y * 0.6 : 0;
     size.y = min.y > 0 ? size.y * 1.6 : max.y;
 
+    /** 正方形に変換 **/
     min.x = position.x - size.y / 2;
     size.x = size.y;
-
-    min.x *= 1.5; min.y *= 1.5;
-    size.x *= 1.8; size.y *= 1.8;
 
     return { point: { ...min }, size: { ...size } };
   }
@@ -93,7 +92,8 @@ export class FaceDetectorClmtrackr {
 
   _checkDetectedBySize() {
     const points = this._getPoints();
-    const size = this._calculateFaceSize( points );
+    if ( !points ) return null;
+    const size = this._calculateSizePercentage( points );
     return size.x > this.sizeThreshold.x && size.y > this.sizeThreshold.y;
   }
 
@@ -104,12 +104,16 @@ export class FaceDetectorClmtrackr {
     return { xs, ys };
   }
 
-  _calculateFacePosition( points ) {
-    const { xs, ys } = points;
-    return this._getPercentage({ x: this._getCenter( xs ), y: this._getCenter( ys ) });
+  _calculatePositionPercentage( points ) {
+    return this._getPercentage( this._calculatePosition( points ) );
   }
 
-  _calculateFaceSize( points ) {
+  _calculatePosition ( points ) {
+    const { xs, ys } = points;
+    return { x: this._getCenter( xs ), y: this._getCenter( ys ) };
+  }
+
+  _calculateSizePercentage( points ) {
     const size = this._calculateSize( points );
     return {
       x: size.x / this.videoTag.width * 100,

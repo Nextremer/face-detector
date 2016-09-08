@@ -31,6 +31,7 @@
     "babel-preset-stage-2": "^6.11.0",
     "babel-register": "^6.11.6",
     "babel-runtime": "^6.11.6",
-    "webpack": "^1.13.2"
+    "webpack": "^1.13.2",
+    "webpack-node-externals": "^1.3.3"
   }
 }
