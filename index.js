@@ -1,13 +1,13 @@
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
-		module.exports = factory(require("eventemitter3"), require("clmtrackr"));
+		module.exports = factory(require("eventemitter3"), require("clmtrackr"), require("tracking"));
 	else if(typeof define === 'function' && define.amd)
-		define(["eventemitter3", "clmtrackr"], factory);
+		define(["eventemitter3", "clmtrackr", "tracking"], factory);
 	else if(typeof exports === 'object')
-		exports["face-detector"] = factory(require("eventemitter3"), require("clmtrackr"));
+		exports["face-detector"] = factory(require("eventemitter3"), require("clmtrackr"), require("tracking"));
 	else
-		root["face-detector"] = factory(root["eventemitter3"], root["clmtrackr"]);
-})(this, function(__WEBPACK_EXTERNAL_MODULE_1__, __WEBPACK_EXTERNAL_MODULE_3__) {
+		root["face-detector"] = factory(root["eventemitter3"], root["clmtrackr"], root["tracking"]);
+})(this, function(__WEBPACK_EXTERNAL_MODULE_1__, __WEBPACK_EXTERNAL_MODULE_3__, __WEBPACK_EXTERNAL_MODULE_5__) {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -72,6 +72,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _faceDetectorClmtrackr2 = _interopRequireDefault(_faceDetectorClmtrackr);
 
+	var _faceDetectorTrackingjs = __webpack_require__(4);
+
+	var _faceDetectorTrackingjs2 = _interopRequireDefault(_faceDetectorTrackingjs);
+
 	var _clmtrackr = __webpack_require__(3);
 
 	var _clmtrackr2 = _interopRequireDefault(_clmtrackr);
@@ -83,11 +87,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 
 	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-	// import FaceDetectorTrackingjs from './face-detector-trackingjs';
-
 
 	var supportedTrackers = {
-	  clmtrackr: _faceDetectorClmtrackr2.default
+	  clmtrackr: _faceDetectorClmtrackr2.default,
+	  trackingjs: _faceDetectorTrackingjs2.default
 	};
 
 	var FaceDetector = function (_EventEmitter) {
@@ -109,6 +112,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    _this.ctx = null;
 	    _this.stream = null;
 	    _this.dataURL = null;
+	    _this.cw = null;
+	    _this.ch = null;
 	    return _this;
 	  }
 
@@ -147,29 +152,32 @@ return /******/ (function(modules) { // webpackBootstrap
 	      /**
 	       * Media
 	       */
+	      var started = false;
 	      navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
 	      navigator.getUserMedia({ video: true, audio: true }, function (stream) {
 	        _this2.videoTag.src = URL.createObjectURL(stream);
-	        _this2.emit('ready');
 	        _this2.stream = stream;
 	        _this2.videoTag.onloadedmetadata = function () {
-	          _this2.videoTag.width = _this2.videoTag.videoWidth;
-	          _this2.videoTag.height = _this2.videoTag.videoHeight;
+	          if (!started) {
+	            started = true;
+	            _this2.videoTag.width = _this2.videoTag.videoWidth;
+	            _this2.videoTag.height = _this2.videoTag.videoHeight;
+	            // TODO: 指定方法考える
+	            _this2.tracker.setup({
+	              videoTag: _this2.videoTag,
+	              canvasTag: _this2.canvasTag,
+	              model: _clmtrackr2.default.models.pca20Svm,
+	              initialScale: 4,
+	              stepSize: 2,
+	              edgesDensity: 0.1,
+	              scoreThreshold: _this2.scoreThreshold,
+	              sizeThreshold: _this2.sizeThreshold
+	            });
+	            _this2.emit('ready');
+	          }
 	        };
 	      }, function (err) {
 	        console.log(err);
-	      });
-
-	      // TODO: 指定方法考える
-	      this.tracker.setup({
-	        videoTag: this.videoTag,
-	        canvasTag: this.canvasTag,
-	        model: _clmtrackr2.default.models.pca20Svm,
-	        initialScale: 4,
-	        stepSize: 2,
-	        edgesDensity: 0.1,
-	        scoreThreshold: this.scoreThreshold,
-	        sizeThreshold: this.sizeThreshold
 	      });
 	    }
 	  }, {
@@ -225,16 +233,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	        var size = _tracker$getVertexesF.size;
 
 
-	        var cw = this.canvasTag.width;
-	        var ch = this.canvasTag.height;
+	        if (!this.cw || !this.ch) {
+	          this.cw = this.canvasTag.width;
+	          this.ch = this.canvasTag.height;
 
-	        if (size.x / size.y > cw / ch) {
-	          ch = size.y / size.x * cw;
-	        } else {
-	          cw = size.x / size.y * ch;
+	          if (size.x / size.y > this.cw / this.ch) {
+	            this.ch = size.y / size.x * this.cw;
+	          } else {
+	            this.cw = size.x / size.y * this.ch;
+	          }
 	        }
 
-	        this.ctx.drawImage(this.videoTag, point.x, point.y, size.x, size.y, 0, 0, cw, ch);
+	        this.ctx.drawImage(this.videoTag, point.x, point.y, size.x, size.y, 0, 0, this.cw, this.ch);
 	        this.dataURL = this.canvasTag.toDataURL('image/png');
 	      }
 	    }
@@ -281,14 +291,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    this.tracker = new _clmtrackr.tracker();
 
-	    this.freq = null;
 	    this.scoreThreshold = null;
 	    this.sizeThreshold = null;
-	    this.detectedStatus = false;
 	    this.videoTag = null;
 	    this.canvasTag = null;
-	    this.ctx = null;
-	    this.dataURL = null;
 	  }
 
 	  _createClass(FaceDetectorClmtrackr, [{
@@ -300,9 +306,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	      var scoreThreshold = _ref.scoreThreshold;
 	      var sizeThreshold = _ref.sizeThreshold;
 
-	      /**
-	       * Model
-	       */
+	      this.videoTag = videoTag;
+	      this.canvasTag = canvasTag;
+
 	      var _model = null;
 	      if (typeof model === 'string' && model in _clmtrackr.models) {
 	        _model = _clmtrackr.models[model];
@@ -315,16 +321,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	      }
 
 	      this.tracker.init(_model);
-
-	      /**
-	       * Video Tag
-	       */
-	      this.videoTag = videoTag;
-
-	      /**
-	       * Canvas Tag
-	       */
-	      this.canvasTag = canvasTag;
 
 	      this.scoreThreshold = scoreThreshold;
 	      this.sizeThreshold = sizeThreshold;
@@ -341,12 +337,24 @@ return /******/ (function(modules) { // webpackBootstrap
 	    key: 'stop',
 	    value: function stop() {
 	      this.tracker.stop();
-	      clearInterval(this.intervalTimer);
 	    }
 	  }, {
 	    key: 'isDetected',
 	    value: function isDetected() {
 	      return this._checkDetectedByScore() && this._checkDetectedBySize();
+	    }
+	  }, {
+	    key: '_checkDetectedByScore',
+	    value: function _checkDetectedByScore() {
+	      return this.tracker.getScore() > this.scoreThreshold;
+	    }
+	  }, {
+	    key: '_checkDetectedBySize',
+	    value: function _checkDetectedBySize() {
+	      var points = this._getPoints();
+	      if (!points) return false;
+	      var size = this._calculateSizePercentage(points);
+	      return size.x > this.sizeThreshold.x && size.y > this.sizeThreshold.y;
 	    }
 	  }, {
 	    key: 'getFaceInfo',
@@ -381,19 +389,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return { point: _extends({}, min), size: _extends({}, size) };
 	    }
 	  }, {
-	    key: '_checkDetectedByScore',
-	    value: function _checkDetectedByScore() {
-	      return this.tracker.getScore() > this.scoreThreshold;
-	    }
-	  }, {
-	    key: '_checkDetectedBySize',
-	    value: function _checkDetectedBySize() {
-	      var points = this._getPoints();
-	      if (!points) return null;
-	      var size = this._calculateSizePercentage(points);
-	      return size.x > this.sizeThreshold.x && size.y > this.sizeThreshold.y;
-	    }
-	  }, {
 	    key: '_getPoints',
 	    value: function _getPoints() {
 	      var position = this.tracker.getCurrentPosition();
@@ -426,8 +421,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    value: function _calculateSizePercentage(points) {
 	      var size = this._calculateSize(points);
 	      return {
-	        x: size.x / this.videoTag.width * 100,
-	        y: size.y / this.videoTag.height * 100
+	        x: size.x / this.videoTag.videoWidth * 100,
+	        y: size.y / this.videoTag.videoHeight * 100
 	      };
 	    }
 	  }, {
@@ -459,8 +454,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    key: '_getPercentage',
 	    value: function _getPercentage(targ) {
 	      return {
-	        x: 100 - targ.x / this.videoTag.width * 100,
-	        y: targ.y / this.videoTag.height * 100
+	        x: 100 - targ.x / this.videoTag.videoWidth * 100,
+	        y: targ.y / this.videoTag.videoHeight * 100
 	      };
 	    }
 	  }, {
@@ -492,6 +487,215 @@ return /******/ (function(modules) { // webpackBootstrap
 /***/ function(module, exports) {
 
 	module.exports = require("clmtrackr");
+
+/***/ },
+/* 4 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+
+	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+	var _eventemitter = __webpack_require__(1);
+
+	var _eventemitter2 = _interopRequireDefault(_eventemitter);
+
+	var _tracking = __webpack_require__(5);
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+	// import 'tracking';
+
+	var FaceDetectorTrackingjs = function (_EventEmitter) {
+	  _inherits(FaceDetectorTrackingjs, _EventEmitter);
+
+	  function FaceDetectorTrackingjs() {
+	    _classCallCheck(this, FaceDetectorTrackingjs);
+
+	    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(FaceDetectorTrackingjs).call(this));
+
+	    _this.tracker = new _tracking.ObjectTracker('face');
+	    _this.trackerTask = null;
+
+	    _this.sizeThreshold = null;
+	    _this.initialScale = null;
+	    _this.stepSize = null;
+	    _this.edgesDensity = null;
+
+	    _this.point = null;
+	    _this.size = null;
+	    return _this;
+	  }
+
+	  _createClass(FaceDetectorTrackingjs, [{
+	    key: 'setup',
+	    value: function setup(_ref) {
+	      var videoTag = _ref.videoTag;
+	      var canvasTag = _ref.canvasTag;
+	      var sizeThreshold = _ref.sizeThreshold;
+	      var initialScale = _ref.initialScale;
+	      var stepSize = _ref.stepSize;
+	      var edgesDensity = _ref.edgesDensity;
+
+	      this.videoTag = videoTag;
+	      this.canvasTag = canvasTag;
+
+	      this.sizeThreshold = sizeThreshold;
+	      this.initialScale = initialScale || 4;
+	      this.stepSize = stepSize || 2;
+	      this.edgesDensity = edgesDensity || 0.1;
+
+	      this.tracker.setInitialScale(this.initialScale);
+	      this.tracker.setStepSize(this.stepSize);
+	      this.tracker.setEdgesDensity(this.edgesDensity);
+	    }
+	  }, {
+	    key: 'start',
+	    value: function start() {
+	      var _this2 = this;
+
+	      if (!this.videoTag) {
+	        throw new Error('Please setup before start');
+	      }
+	      this.trackerTask = (0, _tracking.track)(this.videoTag, this.tracker, { camera: true });
+	      this.tracker.on('track', function (e) {
+	        if (!Array.isArray(e.data) || e.data.length <= 0) {
+	          _this2.point = null;
+	          _this2.size = null;
+	          return;
+	        }
+
+	        // 複数取れた場合は最大サイズのものをデータとする
+	        var maxIdx = null,
+	            max = 0;
+
+	        e.data.forEach(function (r, i) {
+	          var size = _this2._getSizeScala(r.width, r.height);
+	          if (max < size) {
+	            max = size;
+	            maxIdx = i;
+	          }
+	        });
+
+	        _this2.point = { x: e.data[maxIdx].x, y: e.data[maxIdx].y };
+	        _this2.size = { x: e.data[maxIdx].width, y: e.data[maxIdx].height };
+	      });
+	    }
+	  }, {
+	    key: '_getSizeScala',
+	    value: function _getSizeScala(x, y) {
+	      return Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
+	    }
+	  }, {
+	    key: 'stop',
+	    value: function stop() {
+	      this.trackerTask.stop();
+	    }
+	  }, {
+	    key: 'isDetected',
+	    value: function isDetected() {
+	      return this._checkDetectedBySize();
+	    }
+	  }, {
+	    key: '_checkDetectedBySize',
+	    value: function _checkDetectedBySize() {
+	      if (!this.size) return false;
+	      var size = this._calculateSizePercentage();
+	      return size.x > this.sizeThreshold.x && size.y > this.sizeThreshold.y;
+	    }
+	  }, {
+	    key: 'getFaceInfo',
+	    value: function getFaceInfo() {
+	      var position = this._calculatePositionPercentage();
+	      var size = this._calculateSizePercentage();
+	      return { position: position, size: size };
+	    }
+	  }, {
+	    key: 'getVertexesForCapture',
+	    value: function getVertexesForCapture() {
+	      var position = this._calculatePosition();
+	      var size = this.size;
+
+	      var _getVertexes2 = this._getVertexes();
+
+	      var min = _getVertexes2.min;
+	      var max = _getVertexes2.max;
+
+	      /** 髪比率 **/
+
+	      min.y = min.y > size.y * 0.6 ? min.y - size.y * 0.6 : 0;
+	      size.y = min.y > 0 ? size.y * 1.6 : max.y;
+
+	      /** 正方形に変換 **/
+	      min.x = position.x - size.y / 2;
+	      size.x = size.y;
+
+	      return { point: _extends({}, min), size: _extends({}, size) };
+	    }
+	  }, {
+	    key: '_calculatePositionPercentage',
+	    value: function _calculatePositionPercentage() {
+	      var position = this._calculatePosition();
+	      if (!position) return null;
+	      return this._getPercentage(position);
+	    }
+	  }, {
+	    key: '_calculatePosition',
+	    value: function _calculatePosition() {
+	      if (!this.point || !this.size) return null;
+	      return {
+	        x: this.point.x + this.size.x / 2,
+	        y: this.point.y + this.size.y / 2
+	      };
+	    }
+	  }, {
+	    key: '_calculateSizePercentage',
+	    value: function _calculateSizePercentage() {
+	      return !this.size ? null : {
+	        x: this.size.x / this.videoTag.videoWidth * 100,
+	        y: this.size.y / this.videoTag.videoHeight * 100
+	      };
+	    }
+	  }, {
+	    key: '_getVertexes',
+	    value: function _getVertexes() {
+	      return {
+	        min: { x: this.point.x, y: this.point.y },
+	        max: { x: this.point.x + this.size.x, y: this.point.y + this.size.y }
+	      };
+	    }
+	  }, {
+	    key: '_getPercentage',
+	    value: function _getPercentage(targ) {
+	      return {
+	        x: 100 - targ.x / this.videoTag.videoWidth * 100,
+	        y: targ.y / this.videoTag.videoHeight * 100
+	      };
+	    }
+	  }]);
+
+	  return FaceDetectorTrackingjs;
+	}(_eventemitter2.default);
+
+	exports.default = FaceDetectorTrackingjs;
+
+/***/ },
+/* 5 */
+/***/ function(module, exports) {
+
+	module.exports = require("tracking");
 
 /***/ }
 /******/ ])

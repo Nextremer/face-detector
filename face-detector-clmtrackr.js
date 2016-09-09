@@ -4,20 +4,16 @@ export default class FaceDetectorClmtrackr {
   constructor() {
     this.tracker = new tracker();
 
-    this.freq = null;
     this.scoreThreshold = null;
     this.sizeThreshold = null;
-    this.detectedStatus = false;
     this.videoTag = null;
     this.canvasTag = null;
-    this.ctx= null;
-    this.dataURL = null;
   }
 
   setup({ videoTag, canvasTag, model, scoreThreshold, sizeThreshold }) {
-    /**
-     * Model
-     */
+    this.videoTag = videoTag;
+    this.canvasTag = canvasTag;
+
     let _model = null;
     if ( typeof model === 'string' && model in models ) {
       _model = models[ model ];
@@ -30,16 +26,6 @@ export default class FaceDetectorClmtrackr {
     }
 
     this.tracker.init( _model );
-
-    /**
-     * Video Tag
-     */
-    this.videoTag = videoTag;
-
-    /**
-     * Canvas Tag
-     */
-    this.canvasTag = canvasTag;
 
     this.scoreThreshold = scoreThreshold;
     this.sizeThreshold = sizeThreshold;
@@ -54,11 +40,21 @@ export default class FaceDetectorClmtrackr {
 
   stop() {
     this.tracker.stop();
-    clearInterval( this.intervalTimer );
   }
 
   isDetected() {
     return this._checkDetectedByScore() && this._checkDetectedBySize();
+  }
+
+  _checkDetectedByScore() {
+    return this.tracker.getScore() > this.scoreThreshold;
+  }
+
+  _checkDetectedBySize() {
+    const points = this._getPoints();
+    if ( !points ) return false;
+    const size = this._calculateSizePercentage( points );
+    return size.x > this.sizeThreshold.x && size.y > this.sizeThreshold.y;
   }
 
   getFaceInfo( points ) {
@@ -86,17 +82,6 @@ export default class FaceDetectorClmtrackr {
     return { point: { ...min }, size: { ...size } };
   }
 
-  _checkDetectedByScore() {
-    return this.tracker.getScore() > this.scoreThreshold;
-  }
-
-  _checkDetectedBySize() {
-    const points = this._getPoints();
-    if ( !points ) return null;
-    const size = this._calculateSizePercentage( points );
-    return size.x > this.sizeThreshold.x && size.y > this.sizeThreshold.y;
-  }
-
   _getPoints() {
     const position = this.tracker.getCurrentPosition();
     if ( ! position ) return null;
@@ -116,8 +101,8 @@ export default class FaceDetectorClmtrackr {
   _calculateSizePercentage( points ) {
     const size = this._calculateSize( points );
     return {
-      x: size.x / this.videoTag.width * 100,
-      y: size.y / this.videoTag.height * 100,
+      x: size.x / this.videoTag.videoWidth * 100,
+      y: size.y / this.videoTag.videoHeight * 100,
     };
   }
 
@@ -139,8 +124,8 @@ export default class FaceDetectorClmtrackr {
 
   _getPercentage( targ ) {
     return {
-      x: 100 - targ.x / this.videoTag.width * 100,
-      y: targ.y / this.videoTag.height * 100
+      x: 100 - targ.x / this.videoTag.videoWidth * 100,
+      y: targ.y / this.videoTag.videoHeight * 100
     };
   }
 

@@ -20,7 +20,7 @@
   "dependencies": {
     "clmtrackr": "github:nextremer/clmtrackr#dev",
     "eventemitter3": "^1.2.0",
-    "tracking": "^1.1.2"
+    "tracking": "github:nextremer/tracking.js"
   },
   "devDependencies": {
     "babel-cli": "^6.11.4",

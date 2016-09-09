@@ -1,11 +1,11 @@
 import EventEmitter from 'eventemitter3';
 import FaceDetectorClmtrackr from './face-detector-clmtrackr';
-// import FaceDetectorTrackingjs from './face-detector-trackingjs';
+import FaceDetectorTrackingjs from './face-detector-trackingjs';
 import clmtrackr from 'clmtrackr';
 
 const supportedTrackers = {
   clmtrackr: FaceDetectorClmtrackr,
-  // trackingjs: FaceDetectorTrackingjs
+  trackingjs: FaceDetectorTrackingjs
 };
 
 export default class FaceDetector extends EventEmitter {
@@ -21,6 +21,8 @@ export default class FaceDetector extends EventEmitter {
     this.ctx= null;
     this.stream = null;
     this.dataURL = null;
+    this.cw = null;
+    this.ch = null;
   }
 
   setup({ videoTag, canvasTag, freq, scoreThreshold, sizeThreshold }) {
@@ -48,32 +50,36 @@ export default class FaceDetector extends EventEmitter {
     /**
      * Media
      */
+    let started = false;
     navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
     navigator.getUserMedia(
       { video: true, audio: true },
       stream => {
         this.videoTag.src = URL.createObjectURL( stream );
-        this.emit( 'ready' );
         this.stream = stream;
         this.videoTag.onloadedmetadata = () => {
-          this.videoTag.width = this.videoTag.videoWidth;
-          this.videoTag.height = this.videoTag.videoHeight;
+          if ( !started ) {
+            started = true;
+            this.videoTag.width = this.videoTag.videoWidth;
+            this.videoTag.height = this.videoTag.videoHeight;
+            // TODO: 指定方法考える
+            this.tracker.setup({
+              videoTag: this.videoTag,
+              canvasTag: this.canvasTag,
+              model: clmtrackr.models.pca20Svm,
+              initialScale: 4,
+              stepSize: 2,
+              edgesDensity: 0.1,
+              scoreThreshold: this.scoreThreshold,
+              sizeThreshold: this.sizeThreshold,
+            });
+            this.emit( 'ready' );
+          }
         };
       },
       err => { console.log( err ) }
     );
 
-    // TODO: 指定方法考える
-    this.tracker.setup({
-      videoTag: this.videoTag,
-      canvasTag: this.canvasTag,
-      model: clmtrackr.models.pca20Svm,
-      initialScale: 4,
-      stepSize: 2,
-      edgesDensity: 0.1,
-      scoreThreshold: this.scoreThreshold,
-      sizeThreshold: this.sizeThreshold,
-    });
   }
 
   _createTracker( tracker ) {
@@ -114,16 +120,18 @@ export default class FaceDetector extends EventEmitter {
     if ( this.stream ) {
       const { point, size } = this.tracker.getVertexesForCapture();
 
-      let cw = this.canvasTag.width;
-      let ch = this.canvasTag.height;
+      if ( ! this.cw || ! this.ch ) {
+        this.cw = this.canvasTag.width;
+        this.ch = this.canvasTag.height;
 
-      if ( size.x / size.y > cw / ch ) {
-        ch = size.y / size.x * cw;
-      } else {
-        cw = size.x / size.y * ch;
+        if ( size.x / size.y > this.cw / this.ch ) {
+          this.ch = size.y / size.x * this.cw;
+        } else {
+          this.cw = size.x / size.y * this.ch;
+        }
       }
 
-      this.ctx.drawImage( this.videoTag, point.x, point.y, size.x, size.y, 0, 0, cw, ch );
+      this.ctx.drawImage( this.videoTag, point.x, point.y, size.x, size.y, 0, 0, this.cw, this.ch );
       this.dataURL = this.canvasTag.toDataURL('image/png');
     }
   }
