@@ -59,6 +59,7 @@ export default class FaceDetectorClmtrackr {
 
   getFaceInfo( points ) {
     const _points = points || this._getPoints();
+    if ( ! _points ) return null;
     const size = this._calculateSizePercentage( _points );
     const position = this._calculatePositionPercentage( _points );
     return { position, size };
@@ -66,6 +67,8 @@ export default class FaceDetectorClmtrackr {
 
   getVertexesForCapture() {
     const points = this._getPoints();
+
+    if ( ! points ) return null;
 
     const position = this._calculatePosition( points );
     const size = this._calculateSize( points );
