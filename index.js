@@ -96,17 +96,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	var FaceDetector = function (_EventEmitter) {
 	  _inherits(FaceDetector, _EventEmitter);
 
-	  function FaceDetector(_ref) {
-	    var tracker = _ref.tracker;
-
+	  function FaceDetector() {
 	    _classCallCheck(this, FaceDetector);
 
 	    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(FaceDetector).call(this));
-
-	    _this.tracker = _this._createTracker(tracker);
-	    if (!tracker) {
-	      throw new Error('Invalid tracker!');
-	    }
 
 	    _this.detectedStatus = false;
 	    _this.ctx = null;
@@ -119,18 +112,24 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  _createClass(FaceDetector, [{
 	    key: 'setup',
-	    value: function setup(_ref2) {
+	    value: function setup(_ref) {
 	      var _this2 = this;
 
-	      var videoTag = _ref2.videoTag;
-	      var canvasTag = _ref2.canvasTag;
-	      var freq = _ref2.freq;
-	      var scoreThreshold = _ref2.scoreThreshold;
-	      var sizeThreshold = _ref2.sizeThreshold;
+	      var tracker = _ref.tracker;
+	      var videoTag = _ref.videoTag;
+	      var canvasTag = _ref.canvasTag;
+	      var freq = _ref.freq;
+	      var scoreThreshold = _ref.scoreThreshold;
+	      var sizeThreshold = _ref.sizeThreshold;
 
 	      this.freq = freq || 1000;
 	      this.scoreThreshold = scoreThreshold || 0.5;
 	      this.sizeThreshold = sizeThreshold || { x: 10, y: 10 };
+
+	      this.tracker = this._createTracker(tracker);
+	      if (!tracker) {
+	        throw new Error('Invalid tracker!');
+	      }
 
 	      /**
 	       * Video Tag
@@ -360,6 +359,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    key: 'getFaceInfo',
 	    value: function getFaceInfo(points) {
 	      var _points = points || this._getPoints();
+	      if (!_points) return null;
 	      var size = this._calculateSizePercentage(_points);
 	      var position = this._calculatePositionPercentage(_points);
 	      return { position: position, size: size };
@@ -368,6 +368,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    key: 'getVertexesForCapture',
 	    value: function getVertexesForCapture() {
 	      var points = this._getPoints();
+
+	      if (!points) return null;
 
 	      var position = this._calculatePosition(points);
 	      var size = this._calculateSize(points);

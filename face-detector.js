@@ -9,13 +9,8 @@ const supportedTrackers = {
 };
 
 export default class FaceDetector extends EventEmitter {
-  constructor({ tracker }) {
+  constructor() {
     super();
-
-    this.tracker = this._createTracker( tracker );
-    if ( ! tracker ) {
-      throw new Error( 'Invalid tracker!' );
-    }
 
     this.detectedStatus = false;
     this.ctx= null;
@@ -25,10 +20,15 @@ export default class FaceDetector extends EventEmitter {
     this.ch = null;
   }
 
-  setup({ videoTag, canvasTag, freq, scoreThreshold, sizeThreshold }) {
+  setup({ tracker, videoTag, canvasTag, freq, scoreThreshold, sizeThreshold }) {
     this.freq = freq || 1000;
     this.scoreThreshold = scoreThreshold || 0.5;
     this.sizeThreshold = sizeThreshold || { x: 10, y: 10 };
+
+    this.tracker = this._createTracker( tracker );
+    if ( ! tracker ) {
+      throw new Error( 'Invalid tracker!' );
+    }
 
     /**
      * Video Tag
